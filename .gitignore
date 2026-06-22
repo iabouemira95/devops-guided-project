@@ -1,0 +1,11 @@
+.env
+.env.secrets
+node_modules/
+app/node_modules/
+coverage/
+logs/app/*.log
+logs/nginx/*.log
+.DS_Store
+._*
+*.swp
+*.swo

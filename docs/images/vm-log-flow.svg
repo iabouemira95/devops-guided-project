@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980">
+  <rect width="1600" height="980" fill="#101722"/>
+  <text x="48" y="70" fill="#f4f7fb" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700">Expected Logs Flow</text>
+  <text x="48" y="112" fill="#9fb0c7" font-family="Arial, Helvetica, sans-serif" font-size="20">Students should see one request_id move through request started, route-specific logs, and request completed or request failed.</text>
+  <rect x="40" y="150" width="1520" height="790" rx="20" fill="#0b1220" stroke="#22314a" stroke-width="2"/>
+  <g fill="#d9e2f2" font-family="Menlo, Consolas, monospace" font-size="19">
+    <text x="68" y="200">{"timestamp":"2026-06-22T12:37:32.127Z","level":"info","message":"request started","request_id":"162105da-75a0-48ba-b74c-9650ef35cf84","method":"GET","path":"/slow"}</text>
+    <text x="68" y="240" fill="#ffd166">{"timestamp":"2026-06-22T12:37:32.127Z","level":"warn","message":"slow request simulation started","request_id":"162105da-75a0-48ba-b74c-9650ef35cf84","delay_ms":2500}</text>
+    <text x="68" y="280" fill="#ffd166">{"timestamp":"2026-06-22T12:37:34.626Z","level":"warn","message":"slow request simulation completed","request_id":"162105da-75a0-48ba-b74c-9650ef35cf84","delay_ms":2500}</text>
+    <text x="68" y="320">{"timestamp":"2026-06-22T12:37:34.627Z","level":"info","message":"request completed","request_id":"162105da-75a0-48ba-b74c-9650ef35cf84","method":"GET","path":"/slow","status_code":200,"duration_ms":2500.44}</text>
+    <text x="68" y="390">{"timestamp":"2026-06-22T12:37:34.855Z","level":"info","message":"request started","request_id":"77b6200b-c56f-4a3e-a496-1fe20845e9ea","method":"GET","path":"/error"}</text>
+    <text x="68" y="430" fill="#ff7b72">{"timestamp":"2026-06-22T12:37:34.855Z","level":"error","message":"request failed","request_id":"77b6200b-c56f-4a3e-a496-1fe20845e9ea","method":"GET","path":"/error","status_code":500,"error_message":"Intentional training error"}</text>
+    <text x="68" y="470">{"timestamp":"2026-06-22T12:37:34.856Z","level":"info","message":"request completed","request_id":"77b6200b-c56f-4a3e-a496-1fe20845e9ea","method":"GET","path":"/error","status_code":500,"duration_ms":1.07}</text>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700">
+    <text x="68" y="560" fill="#8ad26f">What to notice</text>
+  </g>
+  <g fill="#d9e2f2" font-family="Arial, Helvetica, sans-serif" font-size="22">
+    <text x="68" y="610">1. The same request_id appears across every log line for one request.</text>
+    <text x="68" y="650">2. /slow adds route-specific warning logs before the final completion event.</text>
+    <text x="68" y="690">3. /error creates an error-level log and still ends with request completed.</text>
+    <text x="68" y="730">4. These request IDs can be compared with the GUI response panel and Nginx access logs.</text>
+  </g>
+</svg>

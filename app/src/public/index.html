@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DevOps Control Panel</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Guided DevOps Project</p>
+          <h1>DevOps Control Panel</h1>
+          <p class="hero-text">
+            Use this panel to generate traffic, inspect the service, and create
+            useful logs and metrics while you practice packaging, deployment,
+            and recovery.
+          </p>
+        </div>
+        <div class="meta-card">
+          <h2>Service Metadata</h2>
+          <dl id="service-meta">
+            <div><dt>Service</dt><dd>Loading…</dd></div>
+            <div><dt>Version</dt><dd>Loading…</dd></div>
+            <div><dt>Environment</dt><dd>Loading…</dd></div>
+            <div><dt>Image Tag</dt><dd>Loading…</dd></div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="panel-grid">
+        <article class="action-card">
+          <h2>Traffic and Runtime Checks</h2>
+          <div class="button-grid">
+            <button data-action="health">Check Health</button>
+            <button data-action="ready">Check Readiness</button>
+            <button data-action="version">Show Version</button>
+            <button data-action="items">Load Items from PostgreSQL</button>
+            <button data-action="create-item">Create Demo Item</button>
+            <button data-action="cache-demo">Test Redis Cache</button>
+            <button data-action="slow">Generate Slow Request</button>
+            <button data-action="error">Generate Error</button>
+          </div>
+        </article>
+
+        <article class="action-card">
+          <h2>Observability Shortcuts</h2>
+          <div class="button-grid">
+            <button data-link-key="grafana_url" class="secondary">Open Grafana Dashboard</button>
+            <button data-link-key="grafana_logs_url" class="secondary">Open Grafana Logs</button>
+            <button data-link-key="prometheus_url" class="secondary">Open Prometheus</button>
+          </div>
+          <p id="observability-hint" class="hint">
+            Use these links after you generate slow requests, errors, or item
+            traffic from the buttons on the left.
+          </p>
+        </article>
+      </section>
+
+      <section class="flow-grid">
+        <article class="flow-card">
+          <div class="response-header">
+            <h2>How This Request Flows</h2>
+            <p>
+              Select an action to see how the request moves through Nginx, the
+              app, PostgreSQL or Redis, and the observability stack.
+            </p>
+          </div>
+          <div id="request-flow">Choose a traffic button to load the request path.</div>
+        </article>
+
+        <article class="flow-card">
+          <div class="response-header">
+            <h2>What To Inspect Next</h2>
+            <p>
+              Use this checklist to connect the GUI result with logs, metrics,
+              and dashboards.
+            </p>
+          </div>
+          <div id="request-checklist">Run one request to see the related checks.</div>
+        </article>
+      </section>
+
+      <section class="response-card">
+        <div class="response-header">
+          <h2>Response Panel</h2>
+          <p>
+            Use this panel to compare what the GUI saw with what logs and
+            metrics show, including the request ID from the backend.
+          </p>
+        </div>
+        <pre id="response-output">Click a button to begin.</pre>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

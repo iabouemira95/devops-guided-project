@@ -1,0 +1,157 @@
+name: Publish Image
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-validate:
+    name: publish-test-and-validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install app dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Run app tests
+        working-directory: app
+        run: npm test
+
+      - name: Validate documentation journey
+        run: bash scripts/validate-doc-journey.sh
+
+      - name: Validate static runtime contract
+        run: bash scripts/validate-runtime-contract.sh static
+
+  build-push-and-scan:
+    name: build-push-and-scan
+    needs: test-and-validate
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY_HOST: ${{ secrets.REGISTRY_HOST }}
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      IMAGE_REPOSITORY: TODO-set-your-image-repository
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate registry configuration
+        run: |
+          set -euo pipefail
+
+          missing=0
+
+          if [ -z "${REGISTRY_HOST:-}" ]; then
+            echo "Missing required registry secret: REGISTRY_HOST"
+            missing=1
+          fi
+
+          if [ "${IMAGE_REPOSITORY}" = "TODO-set-your-image-repository" ]; then
+            echo "Training gap CICD-01: replace IMAGE_REPOSITORY in .github/workflows/publish-image.yml."
+            echo "Examples:"
+            echo "- ACR or ECR: devops-mini-app"
+            echo "- GHCR: <owner>/<repo>/devops-mini-app"
+            echo "- Docker Hub: <username>/devops-mini-app"
+            missing=1
+          fi
+
+          if [[ "${REGISTRY_HOST}" == *.amazonaws.com ]]; then
+            if { [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_SECRET_ACCESS_KEY:-}" ] || [ -z "${AWS_REGION:-}" ]; } \
+              && { [ -z "${REGISTRY_USERNAME:-}" ] || [ -z "${REGISTRY_PASSWORD:-}" ]; }; then
+              echo "ECR path detected from REGISTRY_HOST."
+              echo "Provide AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_REGION"
+              echo "or provide REGISTRY_USERNAME and REGISTRY_PASSWORD if you already have a usable registry token."
+              missing=1
+            fi
+          else
+            for key in REGISTRY_USERNAME REGISTRY_PASSWORD; do
+              if [ -z "${!key:-}" ]; then
+                echo "Missing required registry secret: ${key}"
+                missing=1
+              fi
+            done
+          fi
+
+          if [ "${missing}" -eq 1 ]; then
+            echo "Configure your chosen registry settings before running the publish path."
+            exit 1
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS credentials for ECR
+        if: ${{ contains(env.REGISTRY_HOST, '.amazonaws.com') && env.AWS_ACCESS_KEY_ID != '' && env.AWS_SECRET_ACCESS_KEY != '' && env.AWS_REGION != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to ECR
+        if: ${{ contains(env.REGISTRY_HOST, '.amazonaws.com') && env.AWS_ACCESS_KEY_ID != '' && env.AWS_SECRET_ACCESS_KEY != '' && env.AWS_REGION != '' && env.REGISTRY_PASSWORD == '' }}
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Log in to container registry
+        if: ${{ !contains(env.REGISTRY_HOST, '.amazonaws.com') || env.REGISTRY_PASSWORD != '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_HOST }}
+          username: ${{ env.REGISTRY_USERNAME }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+
+      - name: Create image metadata
+        id: image-meta
+        run: |
+          echo "short_sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "image_name=${REGISTRY_HOST}/${IMAGE_REPOSITORY}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push app image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/app.Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ steps.image-meta.outputs.image_name }}:latest
+            ${{ steps.image-meta.outputs.image_name }}:sha-${{ steps.image-meta.outputs.short_sha }}
+
+      - name: Scan published image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ steps.image-meta.outputs.image_name }}:sha-${{ steps.image-meta.outputs.short_sha }}
+          format: table
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+
+      - name: Show pushed image names
+        run: |
+          echo "Published images:"
+          echo "${{ steps.image-meta.outputs.image_name }}:latest"
+          echo "${{ steps.image-meta.outputs.image_name }}:sha-${{ steps.image-meta.outputs.short_sha }}"

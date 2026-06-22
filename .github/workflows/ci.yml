@@ -1,0 +1,104 @@
+name: PR CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-validate:
+    name: test-and-validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install app dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Run app tests
+        working-directory: app
+        run: npm test
+
+      - name: Validate documentation journey
+        run: bash scripts/validate-doc-journey.sh
+
+      - name: Validate static runtime contract
+        run: bash scripts/validate-runtime-contract.sh static
+
+  dependency-scan:
+    name: dependency-scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install app dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Scan production dependencies
+        working-directory: app
+        run: npm audit --omit=dev --audit-level=high
+
+  workflow-and-compose-check:
+    name: workflow-and-compose-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate shell script syntax
+        run: |
+          set -euo pipefail
+          find scripts deploy -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
+
+      - name: Parse YAML files
+        run: |
+          set -euo pipefail
+          ruby -e '
+            require "yaml"
+            ARGV.each { |file| YAML.load_file(file) }
+          ' \
+            docker-compose.yml \
+            docker-compose.vm.yml \
+            .github/workflows/ci.yml \
+            .github/workflows/publish-image.yml \
+            .github/workflows/deploy-production.yml \
+            monitoring/prometheus/prometheus.yml \
+            monitoring/promtail/promtail-config.yml \
+            monitoring/loki/loki-config.yml \
+            monitoring/grafana/provisioning/datasources/datasources.yml \
+            monitoring/grafana/provisioning/dashboards/dashboards.yml
+
+      - name: Render Compose configuration
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.example config >/dev/null
+          cp deploy/example.env .env
+          cp deploy/example.secrets.env .env.secrets
+          docker compose -f docker-compose.vm.yml config >/dev/null
+
+      - name: Build application image
+        run: docker build -f docker/app.Dockerfile -t devops-guided-project:ci .

@@ -1,0 +1,24 @@
+{
+  "name": "devops-guided-project-app",
+  "version": "1.0.0",
+  "description": "Simple DevOps training app with GUI, PostgreSQL, Redis, metrics, and structured logs.",
+  "private": true,
+  "type": "commonjs",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "node-mocks-http": "1.15.0"
+  },
+  "dependencies": {
+    "express": "^4.22.2",
+    "pg": "8.12.0",
+    "prom-client": "15.1.2",
+    "redis": "4.7.0"
+  }
+}

@@ -1,0 +1,11 @@
+.git
+.github
+node_modules
+app/node_modules
+logs
+.DS_Store
+._*
+README.md
+docs
+labs
+instructor
