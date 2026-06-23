@@ -294,7 +294,7 @@ The workflows are:
   - reruns the essential validation path
   - builds and publishes the app image to a container registry
   - pushes both `latest` and `sha-<short-sha>` tags
-  - runs a lightweight image vulnerability scan
+  - runs a lightweight image dependency scan against the published app image
 - `.github/workflows/deploy-production.yml`
   - starts automatically after a successful publish from `main`
   - pauses at the `production` environment approval gate

@@ -46,6 +46,7 @@ Also check whether guided gaps `OBS-01`, `OBS-02`, or `OBS-03` are still unfinis
 - confirm `REGISTRY_HOST`, `REGISTRY_USERNAME`, and `REGISTRY_PASSWORD` are set
 - confirm the workflow ran on the branch you expected
 - confirm whether the run was the `PR CI` workflow or the `Publish Image` workflow
+- remember that the publish workflow image scan focuses on application libraries, not base-image OS packages
 - if the PR is blocked, check which required status check failed:
   - `test-and-validate`
   - `dependency-scan`

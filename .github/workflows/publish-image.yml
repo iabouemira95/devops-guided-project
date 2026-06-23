@@ -140,12 +140,12 @@ jobs:
             ${{ steps.image-meta.outputs.image_name }}:latest
             ${{ steps.image-meta.outputs.image_name }}:sha-${{ steps.image-meta.outputs.short_sha }}
 
-      - name: Scan published image
+      - name: Scan published app dependencies
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ steps.image-meta.outputs.image_name }}:sha-${{ steps.image-meta.outputs.short_sha }}
           format: table
-          vuln-type: os,library
+          vuln-type: library
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: 1

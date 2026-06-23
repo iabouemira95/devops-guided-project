@@ -49,7 +49,8 @@ Then do these guided checks:
 4. Read the trigger for `.github/workflows/publish-image.yml` and confirm it runs after merge to `main`.
 5. Open a successful publish run and find the final pushed image names.
 6. Find one `sha-<short-sha>` tag that could be redeployed later.
-7. Confirm that the app image is scanned after publish, not during the VM deploy.
+7. Confirm that the published app image is scanned after publish, not during the VM deploy.
+8. Note that this training project keeps the image scan focused on application libraries so vendor base-image noise does not block the main learning path.
 
 ## Expected Output
 
