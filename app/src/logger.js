@@ -18,6 +18,7 @@ function createLogger(options = {}) {
   const appName = options.appName || process.env.APP_NAME || "devops-mini-app";
   const environment = options.environment || process.env.APP_ENV || "local";
   const logFile = options.logFile || process.env.APP_LOG_FILE || "";
+  let fileLoggingWarningShown = false;
 
   function log(level, message, extra = {}) {
     const payload = {
@@ -31,7 +32,17 @@ function createLogger(options = {}) {
 
     const line = JSON.stringify(payload);
     process.stdout.write(`${line}\n`);
-    writeLine(logFile, line);
+
+    try {
+      writeLine(logFile, line);
+    } catch (error) {
+      if (!fileLoggingWarningShown) {
+        fileLoggingWarningShown = true;
+        process.stderr.write(
+          `[logger] file logging disabled for ${logFile}: ${error.message}\n`
+        );
+      }
+    }
   }
 
   return {

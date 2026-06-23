@@ -208,6 +208,12 @@ validate_required_values
 section "Deploy"
 info "Deploying ${APP_IMAGE}:${IMAGE_TAG}"
 
+section "Host Directories"
+info "Preparing writable log directories for the app and nginx..."
+mkdir -p "${PROJECT_DIR}/logs/app" "${PROJECT_DIR}/logs/nginx"
+chmod 0777 "${PROJECT_DIR}/logs/app" "${PROJECT_DIR}/logs/nginx"
+pass "Log directories are ready."
+
 if [[ -n "${REGISTRY_HOST:-}" && -n "${REGISTRY_USERNAME:-}" && -n "${REGISTRY_PASSWORD:-}" ]]; then
   info "Logging in to container registry ${REGISTRY_HOST}..."
   printf '%s' "${REGISTRY_PASSWORD}" | docker login "${REGISTRY_HOST}" --username "${REGISTRY_USERNAME}" --password-stdin
@@ -216,6 +222,12 @@ fi
 cd "${PROJECT_DIR}"
 docker compose -f docker-compose.vm.yml pull app
 docker compose -f docker-compose.vm.yml up -d
+
+section "Database Bootstrap"
+info "Applying repeatable database bootstrap..."
+docker compose -f docker-compose.vm.yml exec -T postgres \
+  psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -f /docker-entrypoint-initdb.d/init.sql
+pass "Database bootstrap applied."
 
 section "Smoke Tests"
 info "Running health and readiness checks against http://127.0.0.1 ..."

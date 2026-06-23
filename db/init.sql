@@ -18,6 +18,22 @@ CREATE TABLE IF NOT EXISTS items (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE items ADD COLUMN IF NOT EXISTS book_title TEXT;
+ALTER TABLE items ADD COLUMN IF NOT EXISTS member_name TEXT;
+ALTER TABLE items ADD COLUMN IF NOT EXISTS membership_tier TEXT;
+ALTER TABLE items ADD COLUMN IF NOT EXISTS item_format TEXT;
+ALTER TABLE items ADD COLUMN IF NOT EXISTS shelf_code TEXT;
+ALTER TABLE items ADD COLUMN IF NOT EXISTS due_date DATE;
+
+UPDATE items
+SET
+  book_title = COALESCE(book_title, name),
+  member_name = COALESCE(member_name, owner_name, 'Unknown Member'),
+  membership_tier = COALESCE(membership_tier, 'standard'),
+  item_format = COALESCE(item_format, 'book'),
+  shelf_code = COALESCE(shelf_code, 'LEGACY-01'),
+  due_date = COALESCE(due_date, CURRENT_DATE + INTERVAL '7 days');
+
 INSERT INTO items (
   name,
   book_title,
