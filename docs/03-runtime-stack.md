@@ -56,10 +56,11 @@ What it does:
 
 1. starts from a Node.js 24 LTS image
 2. copies the package files first
-3. runs `npm ci`
-4. copies the application source
+3. installs only production dependencies with `npm ci --omit=dev`
+4. copies the application source into a build stage
 5. prepares the log directory
-6. runs the app as the container process
+6. copies the built app into a minimal Node runtime image
+7. runs the app as the container process
 
 In the trainee-facing version, `DOCKER-01` intentionally leaves the final app start command unfinished.
 Students complete that first so the local stack can become usable before the later runtime and CI/CD labs.
@@ -68,6 +69,7 @@ Why the file is structured this way:
 
 - package files are copied first so Docker layer caching works better
 - `npm ci` gives repeatable installs from the lockfile
+- the final runtime image stays smaller because it does not need the full npm toolchain
 - the app image stays focused on one service only
 
 ## Compose Files

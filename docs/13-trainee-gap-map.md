@@ -33,7 +33,7 @@ Files:
 
 What to implement:
 
-- replace `TODO-start-script` with the correct npm start command
+- replace `TODO-start-script` with the correct app entrypoint path
 - keep the Dockerfile readable and keep the same non-root runtime pattern
 
 What good looks like:

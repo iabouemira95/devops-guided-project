@@ -54,7 +54,7 @@ bash scripts/validate-local-stack.sh foundation
 
 ## What To Do
 
-1. Open `docker/app.Dockerfile` and restore the correct npm start command.
+1. Open `docker/app.Dockerfile` and restore the correct app entrypoint command.
 2. Start the stack with `docker compose up --build`.
 3. Open the GUI at `http://localhost:8080`.
 4. Click `Check Health`.

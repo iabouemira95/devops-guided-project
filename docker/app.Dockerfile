@@ -1,20 +1,22 @@
-FROM node:24.14.0-bookworm-slim
-
-WORKDIR /workspace
-
-COPY app/package*.json ./app/
+FROM node:24.14.0-bookworm-slim AS build
 
 WORKDIR /workspace/app
 
-RUN npm install -g npm@11.9.0 \
-  && npm ci --omit=dev
+COPY app/package*.json ./
+RUN npm ci --omit=dev
 
-COPY app ./ 
+COPY app ./
+RUN mkdir -p /var/log/devops-app
 
-RUN mkdir -p /var/log/devops-app && chown -R node:node /var/log/devops-app /workspace/app
+FROM gcr.io/distroless/nodejs24-debian12
 
-USER node
+WORKDIR /workspace/app
+
+COPY --chown=65532:65532 --from=build /workspace/app /workspace/app
+COPY --chown=65532:65532 --from=build /var/log/devops-app /var/log/devops-app
+
+USER 65532:65532
 
 EXPOSE 3000
 
-CMD ["npm", "TODO-start-script"]
+CMD ["TODO-start-script"]
