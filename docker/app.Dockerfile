@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim
+FROM node:24.14.0-bookworm-slim
 
 WORKDIR /workspace
 
@@ -6,7 +6,8 @@ COPY app/package*.json ./app/
 
 WORKDIR /workspace/app
 
-RUN npm ci
+RUN npm install -g npm@11.9.0 \
+  && npm ci --omit=dev
 
 COPY app ./ 
 
