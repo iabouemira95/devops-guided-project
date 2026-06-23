@@ -16,6 +16,13 @@ The VM deployment is intentionally image-based only:
 4. the VM pulls the selected image tag
 5. the VM never rebuilds the application
 
+Important separation:
+
+- `docker-compose.yml` is only for the local training stack
+- `docker-compose.vm.yml` is only for the VM deployment stack
+
+If you start the local Compose file on the VM, Grafana and Prometheus will be exposed in the wrong way and the access model will no longer match the course design.
+
 This is the recommended target environment when it is available.
 It is not a replacement for the local environment, but it is the preferred production-like path in the course.
 
@@ -156,6 +163,8 @@ That validation confirms:
 
 The `/version` response should match the published image metadata so students can trace the running VM back to a commit and image tag.
 
+If `/version` shows `image_tag: local` or `git_sha: local-build`, the VM is running a manual validation build instead of a real CI-published image. That is acceptable only for temporary instructor debugging. The final production-like proof should always show a CI-published immutable tag.
+
 If you are not using the VM path yet, keep using:
 
 - `bash scripts/validate-local-stack.sh foundation`
@@ -193,6 +202,14 @@ After deployment is working, review [Troubleshooting](11-troubleshooting.md), th
 
 ## SSH Tunnel for Grafana
 
+Quick helper:
+
+```bash
+bash scripts/print-vm-access.sh YOUR_VM_PUBLIC_IP YOUR_VM_USER [/path/to/key.pem]
+```
+
+Manual command:
+
 Use:
 
 ```bash
@@ -203,6 +220,12 @@ Then open:
 
 ```text
 http://localhost:3000
+```
+
+Prometheus uses the same tunnel session:
+
+```text
+http://localhost:9090
 ```
 
 ## Important Reminder

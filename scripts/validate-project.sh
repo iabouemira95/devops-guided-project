@@ -73,6 +73,7 @@ for path in \
   "scripts/reset-local-lab.sh" \
   "scripts/reset-vm-lab.sh" \
   "scripts/package-vm-source.sh" \
+  "scripts/print-vm-access.sh" \
   "deploy/rollback.sh" \
   "monitoring/grafana/provisioning/datasources/datasources.yml" \
   "monitoring/grafana/provisioning/dashboards/dashboards.yml" \

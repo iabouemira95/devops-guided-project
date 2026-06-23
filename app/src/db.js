@@ -15,13 +15,60 @@ function createDb(config = {}) {
       return true;
     },
     async getItems() {
-      const result = await pool.query("SELECT id, name, created_at FROM items ORDER BY id ASC");
+      const result = await pool.query(
+        `SELECT
+           id,
+           name,
+           service,
+           environment,
+           priority,
+           status,
+           owner_name,
+           region,
+           source,
+           details,
+           created_at
+         FROM items
+         ORDER BY created_at DESC, id DESC`
+      );
       return result.rows;
     },
-    async createItem(name) {
+    async createItem(item) {
       const result = await pool.query(
-        "INSERT INTO items (name) VALUES ($1) RETURNING id, name, created_at",
-        [name]
+        `INSERT INTO items (
+           name,
+           service,
+           environment,
+           priority,
+           status,
+           owner_name,
+           region,
+           source,
+           details
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+         RETURNING
+           id,
+           name,
+           service,
+           environment,
+           priority,
+           status,
+           owner_name,
+           region,
+           source,
+           details,
+           created_at`,
+        [
+          item.name,
+          item.service,
+          item.environment,
+          item.priority,
+          item.status,
+          item.owner_name,
+          item.region,
+          item.source,
+          item.details
+        ]
       );
       return result.rows[0];
     },

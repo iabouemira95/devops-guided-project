@@ -24,6 +24,9 @@ Make sure these are ready:
 Read [VM Deployment](../docs/10-vm-deployment.md) before starting the commands.
 In the trainee-facing version, complete guided gaps `CICD-02` and `VM-01` from [Trainee Gap Map](../docs/13-trainee-gap-map.md) before expecting `Deploy Production` and `deploy/deploy.sh` to pull the correct image.
 
+Do not use `docker-compose.yml` on the VM for this lab.
+This lab is specifically about the `docker-compose.vm.yml` path, where the app is public on port `80` and observability stays behind SSH tunnel access.
+
 ## Files Used
 
 - `deploy/vm-setup.sh`
@@ -39,6 +42,7 @@ In the trainee-facing version, complete guided gaps `CICD-02` and `VM-01` from [
 ```bash
 bash deploy/vm-setup.sh /opt/devops-guided-project
 bash deploy/deploy.sh sha-<published-short-sha>
+bash scripts/print-vm-access.sh YOUR_VM_PUBLIC_IP YOUR_VM_USER [/path/to/key.pem]
 ssh -L 3000:localhost:3000 USER@VM_PUBLIC_IP
 bash scripts/validate-vm-deployment.sh http://YOUR_VM_PUBLIC_IP
 ```
@@ -60,6 +64,7 @@ bash scripts/validate-vm-deployment.sh http://YOUR_VM_PUBLIC_IP
 - `/health` succeeds
 - `/ready` succeeds
 - the deployment came from a published image tag rather than a VM rebuild
+- `/version` shows a real CI-published tag instead of `local`
 - the production environment approval clearly separated publish from deploy
 - Grafana is reachable through the SSH tunnel
 - students can explain which image tag is running and where its secrets came from
@@ -112,6 +117,7 @@ Ask each team to explain how the selected image tag reached the VM, why the depl
 Run:
 
 ```bash
+bash scripts/validate-runtime-contract.sh vm http://127.0.0.1
 bash scripts/validate-vm-deployment.sh http://YOUR_VM_PUBLIC_IP
 ```
 

@@ -114,10 +114,12 @@ validate_api() {
 
   if json_has_key "${RESPONSE_BODY}" "service_name" \
     && json_has_key "${RESPONSE_BODY}" "version" \
-    && json_has_key "${RESPONSE_BODY}" "environment"; then
-    pass "GET /api returned service metadata."
+    && json_has_key "${RESPONSE_BODY}" "environment" \
+    && json_equals "${RESPONSE_BODY}" '.simulation_profile' 'operations-feed' \
+    && jq -e '.supported_services | length >= 2' >/dev/null <<<"${RESPONSE_BODY}"; then
+    pass "GET /api returned service metadata and simulation context."
   else
-    fail "GET /api response is missing expected metadata keys."
+    fail "GET /api response is missing expected metadata or simulation keys."
   fi
 }
 
@@ -217,10 +219,12 @@ validate_get_items() {
 
   if json_equals "${RESPONSE_BODY}" '.source' 'postgres' \
     && json_has_key "${RESPONSE_BODY}" "items" \
-    && json_number_ge "${RESPONSE_BODY}" '.count' 1; then
-    pass "GET /items returned PostgreSQL-backed items."
+    && json_has_key "${RESPONSE_BODY}" "summary" \
+    && json_number_ge "${RESPONSE_BODY}" '.count' 1 \
+    && jq -e '.items[0].service and .items[0].owner_name and .summary.by_status and .summary.by_service' >/dev/null <<<"${RESPONSE_BODY}"; then
+    pass "GET /items returned PostgreSQL-backed items with operational summary fields."
   else
-    fail "GET /items response did not confirm PostgreSQL-backed items."
+    fail "GET /items response did not confirm the richer PostgreSQL-backed operational dataset."
   fi
 }
 
@@ -238,10 +242,13 @@ validate_create_item() {
   assert_request_id "POST /items"
 
   if json_has_key "${RESPONSE_BODY}" "item" \
-    && json_equals "${RESPONSE_BODY}" '.item.name' "${CREATED_ITEM_NAME}"; then
-    pass "POST /items created the requested item."
+    && json_has_key "${RESPONSE_BODY}" "summary" \
+    && json_has_key "${RESPONSE_BODY}" "recent_items" \
+    && json_equals "${RESPONSE_BODY}" '.item.name' "${CREATED_ITEM_NAME}" \
+    && jq -e '.item.service and .item.priority and .item.status' >/dev/null <<<"${RESPONSE_BODY}"; then
+    pass "POST /items created the requested simulated operational item."
   else
-    fail "POST /items response did not confirm the created item."
+    fail "POST /items response did not confirm the richer created-item payload."
   fi
 }
 
@@ -263,6 +270,11 @@ validate_created_item_visible() {
 validate_cache_demo() {
   request GET /cache-demo
 
+  if [[ "${RESPONSE_STATUS}" == "501" ]] && grep -q 'APP-01' <<<"${RESPONSE_BODY}"; then
+    pass "GET /cache-demo correctly reports the APP-01 trainee gap."
+    return
+  fi
+
   if [[ "${RESPONSE_STATUS}" == "200" ]]; then
     pass "First GET /cache-demo returned HTTP 200."
   else
@@ -272,8 +284,10 @@ validate_cache_demo() {
 
   assert_request_id "First GET /cache-demo"
 
-  if json_has_key "${RESPONSE_BODY}" "source" && json_has_key "${RESPONSE_BODY}" "value"; then
-    pass "First GET /cache-demo returned cache payload."
+  if json_has_key "${RESPONSE_BODY}" "source" \
+    && json_has_key "${RESPONSE_BODY}" "value" \
+    && jq -e '.value.highlighted_service and .value.highlighted_region and .value.cache_key' >/dev/null <<<"${RESPONSE_BODY}"; then
+    pass "First GET /cache-demo returned the richer cache payload."
   else
     fail "First GET /cache-demo response is missing cache payload fields."
   fi

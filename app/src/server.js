@@ -11,6 +11,80 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const simulationCatalog = Object.freeze({
+  scenario_name: "Regional commerce platform",
+  team_name: "Platform Operations",
+  services: ["checkout-api", "inventory-worker", "payments-api", "catalog-api"],
+  environments: ["training-vm", "staging-sim", "prod-sim"],
+  priorities: ["low", "medium", "high", "critical"],
+  statuses: ["monitoring", "investigating", "pending-review", "resolved"],
+  owners: ["platform-oncall", "data-ops", "cache-team", "release-manager"],
+  regions: ["sweden-central", "westeurope", "uk-south", "uae-north"],
+  sources: ["synthetic-alert", "queue-monitor", "redis-cache-demo", "manual-check"]
+});
+
+function pickFrom(values) {
+  return values[Math.floor(Math.random() * values.length)];
+}
+
+function getSimulationOverview() {
+  return {
+    simulation_profile: "operations-feed",
+    scenario_name: simulationCatalog.scenario_name,
+    team_name: simulationCatalog.team_name,
+    supported_services: simulationCatalog.services,
+    environments: simulationCatalog.environments,
+    regions: simulationCatalog.regions,
+    dataset_note:
+      "This app simulates operational records such as incidents, backlog events, cache outcomes, and release follow-up checks."
+  };
+}
+
+function buildDemoItem(overrides = {}) {
+  const service = overrides.service || pickFrom(simulationCatalog.services);
+  const environment = overrides.environment || pickFrom(simulationCatalog.environments);
+  const priority = overrides.priority || pickFrom(simulationCatalog.priorities);
+  const status = overrides.status || pickFrom(simulationCatalog.statuses);
+  const owner_name = overrides.owner_name || pickFrom(simulationCatalog.owners);
+  const region = overrides.region || pickFrom(simulationCatalog.regions);
+  const source = overrides.source || pickFrom(simulationCatalog.sources);
+
+  return {
+    name:
+      overrides.name ||
+      `${service} ${status.replace(/-/g, " ")} check at ${new Date().toISOString().slice(11, 19)}`,
+    service,
+    environment,
+    priority,
+    status,
+    owner_name,
+    region,
+    source,
+    details:
+      overrides.details ||
+      `Synthetic operational record for ${service} in ${environment}. Owner ${owner_name} is reviewing ${status} activity in ${region}.`
+  };
+}
+
+function countBy(items, key) {
+  return items.reduce((accumulator, item) => {
+    const bucket = item[key];
+    accumulator[bucket] = (accumulator[bucket] || 0) + 1;
+    return accumulator;
+  }, {});
+}
+
+function buildItemsSummary(items) {
+  return {
+    total_items: items.length,
+    by_status: countBy(items, "status"),
+    by_priority: countBy(items, "priority"),
+    by_service: countBy(items, "service"),
+    by_environment: countBy(items, "environment"),
+    latest_item: items[0] || null
+  };
+}
+
 function getMetadata() {
   return {
     service_name: process.env.APP_NAME || "devops-mini-app",
@@ -120,7 +194,10 @@ function createApp(deps = {}) {
   });
 
   app.get("/api", (_req, res) => {
-    res.json(getMetadata());
+    res.json({
+      ...getMetadata(),
+      ...getSimulationOverview()
+    });
   });
 
   app.get("/ui-config", (req, res) => {
@@ -202,6 +279,7 @@ function createApp(deps = {}) {
       res.json({
         source: "postgres",
         count: items.length,
+        summary: buildItemsSummary(items),
         items
       });
     } catch (error) {
@@ -211,23 +289,29 @@ function createApp(deps = {}) {
 
   app.post("/items", async (req, res, next) => {
     try {
-      const name = req.body?.name || `demo-item-${Date.now()}`;
-      const item = await db.createItem(name);
+      const simulatedItem = buildDemoItem(req.body || {});
+      const item = await db.createItem(simulatedItem);
+      const items = await db.getItems();
       logger.info("postgres item created", {
         request_id: req.requestId,
         item_id: item.id,
-        item_name: item.name
+        item_name: item.name,
+        item_service: item.service,
+        item_priority: item.priority,
+        item_status: item.status
       });
       res.status(201).json({
-        message: "Item created",
-        item
+        message: "Simulated operational item created",
+        item,
+        summary: buildItemsSummary(items),
+        recent_items: items.slice(0, 5)
       });
     } catch (error) {
       next(error);
     }
   });
 
-  app.get("/cache-demo", async (_req, res, next) => {
+  app.get("/cache-demo", async (_req, res, _next) => {
     logger.warn("training gap: cache demo is not implemented yet", {
       request_id: _req.requestId,
       gap_id: "APP-01",

@@ -8,8 +8,32 @@ const { createApp } = require("../src/server");
 
 function createFakeDeps() {
   const items = [
-    { id: 1, name: "seed-item-1", created_at: "2026-06-01T10:00:00Z" },
-    { id: 2, name: "seed-item-2", created_at: "2026-06-01T10:05:00Z" }
+    {
+      id: 1,
+      name: "Checkout API latency spike after release",
+      service: "checkout-api",
+      environment: "prod-sim",
+      priority: "high",
+      status: "investigating",
+      owner_name: "platform-oncall",
+      region: "sweden-central",
+      source: "synthetic-alert",
+      details: "Synthetic test item 1",
+      created_at: "2026-06-01T10:00:00Z"
+    },
+    {
+      id: 2,
+      name: "Inventory sync backlog building up",
+      service: "inventory-worker",
+      environment: "staging-sim",
+      priority: "medium",
+      status: "monitoring",
+      owner_name: "data-ops",
+      region: "westeurope",
+      source: "queue-monitor",
+      details: "Synthetic test item 2",
+      created_at: "2026-06-01T10:05:00Z"
+    }
   ];
 
   return {
@@ -20,8 +44,12 @@ function createFakeDeps() {
       async getItems() {
         return items;
       },
-      async createItem(name) {
-        const item = { id: items.length + 1, name, created_at: new Date().toISOString() };
+      async createItem(itemInput) {
+        const item = {
+          id: items.length + 1,
+          created_at: new Date().toISOString(),
+          ...itemInput
+        };
         items.push(item);
         return item;
       }
@@ -83,6 +111,8 @@ test("GET /api returns service metadata", async () => {
   assert.equal(response.status, 200);
   assert.equal(typeof response.body.service_name, "string");
   assert.equal(typeof response.body.environment, "string");
+  assert.equal(response.body.simulation_profile, "operations-feed");
+  assert.ok(Array.isArray(response.body.supported_services));
 });
 
 test("GET /version returns build metadata", async () => {
@@ -117,9 +147,29 @@ test("POST /items creates a new item", async () => {
     method: "POST",
     url: "/items",
     headers: { "content-type": "application/json" },
-    body: { name: "from-test" }
+    body: { name: "from-test", service: "checkout-api", priority: "critical" }
   });
 
   assert.equal(response.status, 201);
   assert.equal(response.body.item.name, "from-test");
+  assert.equal(response.body.item.service, "checkout-api");
+  assert.equal(response.body.item.priority, "critical");
+  assert.ok(response.body.summary.total_items >= 3);
+});
+
+test("GET /cache-demo returns the trainee gap response", async () => {
+  const response = await invokeApp({ url: "/cache-demo" });
+
+  assert.equal(response.status, 501);
+  assert.match(response.body.error, /APP-01/);
+});
+
+test("GET /items returns a richer operational dataset summary", async () => {
+  const response = await invokeApp({ url: "/items" });
+
+  assert.equal(response.status, 200);
+  assert.ok("summary" in response.body);
+  assert.ok("by_status" in response.body.summary);
+  assert.ok("service" in response.body.items[0]);
+  assert.ok("owner_name" in response.body.items[0]);
 });

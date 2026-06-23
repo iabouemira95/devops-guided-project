@@ -18,6 +18,76 @@ function setOutput(title, payload) {
   output.textContent = `${title}\n\n${JSON.stringify(payload, null, 2)}`;
 }
 
+function renderSimulationContext(apiInfo) {
+  const container = document.getElementById("simulation-context");
+  container.innerHTML = `
+    <p><strong>${apiInfo.scenario_name}</strong> is used to simulate a small platform-operations service view.</p>
+    <ul class="detail-list">
+      <li><strong>Team:</strong> ${apiInfo.team_name}</li>
+      <li><strong>Profile:</strong> ${apiInfo.simulation_profile}</li>
+      <li><strong>Services:</strong> ${apiInfo.supported_services.join(", ")}</li>
+      <li><strong>Environments:</strong> ${apiInfo.environments.join(", ")}</li>
+      <li><strong>Regions:</strong> ${apiInfo.regions.join(", ")}</li>
+    </ul>
+    <p class="hint">${apiInfo.dataset_note}</p>
+  `;
+}
+
+function formatTopEntries(entries = {}) {
+  return Object.entries(entries)
+    .slice(0, 4)
+    .map(([label, count]) => `${label}: ${count}`)
+    .join(" | ");
+}
+
+function renderDatasetSnapshot(payload = {}) {
+  const snapshot = document.getElementById("dataset-snapshot");
+  const items = payload.items || payload.recent_items || [];
+  const summary = payload.summary;
+
+  if (!summary || !items.length) {
+    snapshot.innerHTML =
+      "Run <strong>Load Items from PostgreSQL</strong> or <strong>Create Demo Item</strong> to inspect the simulated operational dataset.";
+    return;
+  }
+
+  snapshot.innerHTML = `
+    <dl class="summary-grid">
+      <div class="summary-item"><dt>Total Items</dt><dd>${summary.total_items}</dd></div>
+      <div class="summary-item"><dt>Top Status</dt><dd>${formatTopEntries(summary.by_status)}</dd></div>
+      <div class="summary-item"><dt>Top Priority</dt><dd>${formatTopEntries(summary.by_priority)}</dd></div>
+      <div class="summary-item"><dt>Top Service</dt><dd>${formatTopEntries(summary.by_service)}</dd></div>
+    </dl>
+    <table class="dataset-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Service</th>
+          <th>Status</th>
+          <th>Priority</th>
+          <th>Owner</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items
+          .slice(0, 5)
+          .map(
+            (item) => `
+              <tr>
+                <td>${item.name}</td>
+                <td>${item.service}</td>
+                <td>${item.status}</td>
+                <td>${item.priority}</td>
+                <td>${item.owner_name}</td>
+              </tr>
+            `
+          )
+          .join("")}
+      </tbody>
+    </table>
+  `;
+}
+
 const actionGuides = {
   health: {
     title: "Check Health",
@@ -69,16 +139,16 @@ const actionGuides = {
   items: {
     title: "Load Items from PostgreSQL",
     route: "GET /items",
-    tags: ["PostgreSQL", "seed data", "slow path candidate"],
+    tags: ["PostgreSQL", "operational dataset", "summary view", "slow path candidate"],
     flow: [
       "The app receives GET /items after Nginx forwards it.",
       "The app queries PostgreSQL for the items table.",
-      "Results are returned to the browser and logged with one request_id.",
+      "Results are returned to the browser with a dataset summary and one request_id.",
       "This request is a good way to compare app latency with database-backed work."
     ],
     checks: [
       "If this route is slow, compare app logs, PostgreSQL container logs, and request duration metrics.",
-      "Confirm the returned items include the seed rows from db/init.sql."
+      "Confirm the returned items include realistic seeded operational records from db/init.sql."
     ]
   },
   "create-item": {
@@ -87,13 +157,13 @@ const actionGuides = {
     tags: ["PostgreSQL", "write path", "structured logs"],
     flow: [
       "The browser sends POST /items and Nginx forwards it to the app.",
-      "The app writes a new row to PostgreSQL and returns HTTP 201.",
-      "The new item can be confirmed immediately with the Load Items button.",
+      "The app writes a new simulated operational row to PostgreSQL and returns HTTP 201.",
+      "The new item can be confirmed immediately with the Load Items button or the dataset snapshot.",
       "The app and Nginx logs should both show the POST path and created status."
     ],
     checks: [
       "Look for a 201 status in app logs and Nginx access logs.",
-      "Load items again to confirm the new row persisted."
+      "Load items again to confirm the new simulated record persisted."
     ]
   },
   "cache-demo": {
@@ -103,7 +173,7 @@ const actionGuides = {
     flow: [
       "Nginx forwards GET /cache-demo to the app.",
       "The app asks Redis for the cached value first.",
-      "If no cached value exists, the app generates one and stores it in Redis.",
+      "If no cached value exists, the app generates a small operational snapshot and stores it in Redis.",
       "A second run should show the cached source rather than the app-generated source."
     ],
     checks: [
@@ -213,6 +283,7 @@ async function loadMetadata() {
     <div><dt>Image Tag</dt><dd>${meta.image_tag}</dd></div>
   `;
 
+  renderSimulationContext(apiInfo.body);
   configureShortcutButtons(uiConfig.body);
 }
 
@@ -265,6 +336,7 @@ document.addEventListener("click", async (event) => {
 
   try {
     const result = await actions[action]();
+    renderDatasetSnapshot(result.body);
     setOutput(`${action} -> HTTP ${result.status}`, {
       request_id: result.requestId,
       payload: result.body

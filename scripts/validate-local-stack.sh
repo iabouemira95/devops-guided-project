@@ -119,10 +119,12 @@ items_json="$(http_json /items)" || {
   items_json=""
 }
 
-if [[ -n "${items_json}" ]] && require_json_key "${items_json}" "items"; then
-  pass "GET /items returned PostgreSQL-backed data."
+if [[ -n "${items_json}" ]] \
+  && require_json_key "${items_json}" "items" \
+  && require_json_key "${items_json}" "summary"; then
+  pass "GET /items returned PostgreSQL-backed data with summary fields."
 else
-  fail "GET /items response did not contain items."
+  fail "GET /items response did not contain items and summary."
 fi
 
 if [[ "${MODE}" == "full" ]]; then

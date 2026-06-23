@@ -17,6 +17,13 @@ This project implements that request with a small Express app, Docker Compose, N
 - a local environment for fast learning and validation
 - a Linux VM environment for production-like deployment practice
 
+Two operational rules are important:
+
+- use `docker-compose.yml` only for the local training stack
+- use `docker-compose.vm.yml` only for the VM deployment stack
+
+Do not use the local Compose file on the VM when you want the production-like access model. The VM path is designed so only the app is public, while Grafana and Prometheus stay behind SSH tunnel access.
+
 ## Who This Is For
 
 - junior DevOps engineers
@@ -197,6 +204,12 @@ Then validate the local stack:
 bash scripts/validate-local-stack.sh foundation
 ```
 
+For the VM path, do not reuse the local Compose file. Use `docker-compose.vm.yml`, then confirm the tunnel-friendly layout with:
+
+```bash
+bash scripts/validate-runtime-contract.sh vm http://127.0.0.1
+```
+
 ## Local Usage Flow
 
 1. Start the stack with `docker compose up --build`.
@@ -245,8 +258,11 @@ These scripts are part of the expected workflow, not optional extras.
 - `bash scripts/validate-runtime-contract.sh vm http://127.0.0.1`
 - `bash scripts/validate-doc-journey.sh`
 - `bash scripts/validate-project.sh`
+- `bash scripts/print-vm-access.sh YOUR_VM_PUBLIC_IP YOUR_VM_USER [/path/to/key.pem]`
 
 Use the runtime contract validator only after the matching local or VM stack is already running.
+
+Use the VM deployment validator only for image-based VM deploys. It now fails if `/version` still shows a local validation build, unless you explicitly override it with `ALLOW_LOCAL_VM_BUILD=1` for temporary instructor debugging.
 
 Reset helpers for safe retries:
 
