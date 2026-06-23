@@ -212,6 +212,8 @@ section "Host Directories"
 info "Preparing writable log directories for the app and nginx..."
 mkdir -p "${PROJECT_DIR}/logs/app" "${PROJECT_DIR}/logs/nginx"
 chmod 0777 "${PROJECT_DIR}/logs/app" "${PROJECT_DIR}/logs/nginx"
+touch "${PROJECT_DIR}/logs/app/app.log" "${PROJECT_DIR}/logs/nginx/access.log" "${PROJECT_DIR}/logs/nginx/error.log"
+chmod 0666 "${PROJECT_DIR}/logs/app/app.log" "${PROJECT_DIR}/logs/nginx/access.log" "${PROJECT_DIR}/logs/nginx/error.log"
 pass "Log directories are ready."
 
 if [[ -n "${REGISTRY_HOST:-}" && -n "${REGISTRY_USERNAME:-}" && -n "${REGISTRY_PASSWORD:-}" ]]; then
