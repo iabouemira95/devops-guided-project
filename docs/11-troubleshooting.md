@@ -21,7 +21,7 @@ If Docker is already running on Linux but `docker ps` still fails, add your user
 - check Redis logs
 - check app logs
 
-If `/ready` succeeds but `Test Redis Cache` still fails in the trainee-facing version, check whether `APP-01` is still unfinished.
+If `/ready` succeeds but `Test Popular Titles Cache` still fails in the trainee-facing version, check whether `APP-01` is still unfinished.
 
 ## Grafana Has No Data
 

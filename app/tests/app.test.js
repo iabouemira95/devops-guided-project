@@ -10,27 +10,39 @@ function createFakeDeps() {
   const items = [
     {
       id: 1,
-      name: "Checkout API latency spike after release",
-      service: "checkout-api",
-      environment: "prod-sim",
+      name: "The Pragmatic Programmer checkout for Nora Hassan",
+      book_title: "The Pragmatic Programmer",
+      member_name: "Nora Hassan",
+      membership_tier: "research",
+      item_format: "book",
+      shelf_code: "A-14",
+      due_date: "2026-06-08",
+      service: "circulation-desk",
+      environment: "training-vm",
       priority: "high",
-      status: "investigating",
-      owner_name: "platform-oncall",
-      region: "sweden-central",
-      source: "synthetic-alert",
+      status: "pending-review",
+      owner_name: "desk-lead",
+      region: "central-branch",
+      source: "self-checkout-kiosk",
       details: "Synthetic test item 1",
       created_at: "2026-06-01T10:00:00Z"
     },
     {
       id: 2,
-      name: "Inventory sync backlog building up",
-      service: "inventory-worker",
+      name: "Clean Code hold for Mariam Samir",
+      book_title: "Clean Code",
+      member_name: "Mariam Samir",
+      membership_tier: "standard",
+      item_format: "book",
+      shelf_code: "B-07",
+      due_date: "2026-06-05",
+      service: "holds-queue",
       environment: "staging-sim",
       priority: "medium",
-      status: "monitoring",
-      owner_name: "data-ops",
-      region: "westeurope",
-      source: "queue-monitor",
+      status: "ready-for-pickup",
+      owner_name: "branch-librarian",
+      region: "west-end-branch",
+      source: "manual-desk",
       details: "Synthetic test item 2",
       created_at: "2026-06-01T10:05:00Z"
     }
@@ -111,7 +123,7 @@ test("GET /api returns service metadata", async () => {
   assert.equal(response.status, 200);
   assert.equal(typeof response.body.service_name, "string");
   assert.equal(typeof response.body.environment, "string");
-  assert.equal(response.body.simulation_profile, "operations-feed");
+  assert.equal(response.body.simulation_profile, "library-circulation");
   assert.ok(Array.isArray(response.body.supported_services));
 });
 
@@ -147,12 +159,12 @@ test("POST /items creates a new item", async () => {
     method: "POST",
     url: "/items",
     headers: { "content-type": "application/json" },
-    body: { name: "from-test", service: "checkout-api", priority: "critical" }
+    body: { book_title: "from-test", member_name: "Test Borrower", service: "circulation-desk", priority: "critical" }
   });
 
   assert.equal(response.status, 201);
-  assert.equal(response.body.item.name, "from-test");
-  assert.equal(response.body.item.service, "checkout-api");
+  assert.equal(response.body.item.book_title, "from-test");
+  assert.equal(response.body.item.service, "circulation-desk");
   assert.equal(response.body.item.priority, "critical");
   assert.ok(response.body.summary.total_items >= 3);
 });
@@ -164,12 +176,13 @@ test("GET /cache-demo returns the trainee gap response", async () => {
   assert.match(response.body.error, /APP-01/);
 });
 
-test("GET /items returns a richer operational dataset summary", async () => {
+test("GET /items returns a richer library dataset summary", async () => {
   const response = await invokeApp({ url: "/items" });
 
   assert.equal(response.status, 200);
   assert.ok("summary" in response.body);
   assert.ok("by_status" in response.body.summary);
-  assert.ok("service" in response.body.items[0]);
-  assert.ok("owner_name" in response.body.items[0]);
+  assert.ok("book_title" in response.body.items[0]);
+  assert.ok("borrower_name" in response.body.items[0]);
+  assert.ok("workflow_area" in response.body.items[0]);
 });

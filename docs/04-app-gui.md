@@ -1,6 +1,6 @@
 # App GUI
 
-The GUI is called **DevOps Control Panel**.
+The GUI is called **Library Operations Control Panel**.
 
 It is not a frontend project.
 
@@ -12,39 +12,19 @@ It is a simple helper for:
 - creating metrics
 - explaining how each request is processed
 
-## Expected GUI End State
-
-After the core app gap and the main observability gaps are completed, the GUI should look close to this:
-
-![Expected DevOps Control Panel](images/vm-app-end-state.png)
-
-What students should notice in this end state:
-
-- service metadata is visible near the top
-- traffic buttons are grouped in one place
-- observability shortcuts are visible but separated from traffic actions
-- the request-flow panel explains what each button does
-- the response panel shows the live request result and request ID
-
-In the trainee-facing version, do not expect every button or observability shortcut to behave exactly like this on the first run.
-Use this screenshot as the known-good target after the guided gaps are completed.
-
 ## Buttons
 
 - Check Health
 - Check Readiness
 - Show Version
-- Load Items from PostgreSQL
-- Create Demo Item
-- Test Redis Cache
+- Load Library Records
+- Create Demo Checkout
+- Test Popular Titles Cache
 - Generate Slow Request
 - Generate Error
 - Open Grafana Dashboard
 - Open Grafana Logs
 - Open Prometheus
-
-In the trainee-facing version, `Test Redis Cache` is intentionally left incomplete as guided gap `APP-01`.
-Students should restore the real Redis-backed behavior as part of the hands-on journey.
 
 ## Request Types in the GUI
 
@@ -53,9 +33,9 @@ Students should restore the real Redis-backed behavior as part of the hands-on j
 | Check Health | `GET /health` | process health only | none |
 | Check Readiness | `GET /ready` | dependency readiness | PostgreSQL, Redis |
 | Show Version | `GET /version` | deployment metadata | none |
-| Load Items from PostgreSQL | `GET /items` | read path through database | PostgreSQL |
-| Create Demo Item | `POST /items` | write path through database | PostgreSQL |
-| Test Redis Cache | `GET /cache-demo` | cache miss vs cache hit | Redis |
+| Load Library Records | `GET /items` | read path through database | PostgreSQL |
+| Create Demo Checkout | `POST /items` | write path through database | PostgreSQL |
+| Test Popular Titles Cache | `GET /cache-demo` | cache miss vs cache hit | Redis |
 | Generate Slow Request | `GET /slow` | latency in logs and metrics | none |
 | Generate Error | `GET /error` | 500 response and error logs | none |
 
@@ -120,14 +100,14 @@ Use it to answer:
 Use it to answer:
 
 - is PostgreSQL reachable?
-- can the app read and write real data?
+- can the app read and write believable library circulation data?
 
 ### `/cache-demo`
 
 Use it to answer:
 
 - is Redis reachable?
-- what does a cache miss look like?
+- what does a cache miss look like for popular titles?
 - what does a cache hit look like?
 
 ### `/slow`

@@ -46,8 +46,8 @@ bash scripts/validate-observability.sh
 
 1. Click `Generate Slow Request`.
 2. Click `Generate Error`.
-3. Click `Load Items from PostgreSQL`.
-4. Click `Test Redis Cache`.
+3. Click `Load Library Records`.
+4. Click `Test Popular Titles Cache`.
 5. In Grafana Explore, find the app logs for `/slow` and `/error`.
 6. In Grafana Explore, find the matching Nginx logs.
 7. Compare those results with `docker compose logs`.

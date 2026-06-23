@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DevOps Control Panel</title>
+    <title>Library Operations Control Panel</title>
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
@@ -11,11 +11,11 @@
       <section class="hero">
         <div>
           <p class="eyebrow">Guided DevOps Project</p>
-          <h1>DevOps Control Panel</h1>
+          <h1>Library Operations Control Panel</h1>
           <p class="hero-text">
-            Use this panel to generate traffic, inspect the service, and create
-            useful logs and metrics while you practice packaging, deployment,
-            and recovery.
+            Use this panel to simulate checkout, hold, and catalog activity
+            while you inspect how requests move through the stack and show up in
+            logs, metrics, packaging, deployment, and recovery workflows.
           </p>
         </div>
         <div class="meta-card">
@@ -36,9 +36,9 @@
             <button data-action="health">Check Health</button>
             <button data-action="ready">Check Readiness</button>
             <button data-action="version">Show Version</button>
-            <button data-action="items">Load Items from PostgreSQL</button>
-            <button data-action="create-item">Create Demo Item</button>
-            <button data-action="cache-demo">Test Redis Cache</button>
+            <button data-action="items">Load Library Records</button>
+            <button data-action="create-item">Create Demo Checkout</button>
+            <button data-action="cache-demo">Test Popular Titles Cache</button>
             <button data-action="slow">Generate Slow Request</button>
             <button data-action="error">Generate Error</button>
           </div>
@@ -62,15 +62,15 @@
         <article class="detail-card">
           <h2>Simulation Context</h2>
           <div id="simulation-context">
-            Loading the simulated operational scenario…
+            Loading the simulated library service scenario…
           </div>
         </article>
 
         <article class="detail-card">
           <h2>Dataset Snapshot</h2>
           <div id="dataset-snapshot">
-            Run <strong>Load Items from PostgreSQL</strong> or
-            <strong>Create Demo Item</strong> to inspect the simulated operational dataset.
+            Run <strong>Load Library Records</strong> or
+            <strong>Create Demo Checkout</strong> to inspect the simulated library dataset.
           </div>
         </article>
       </section>

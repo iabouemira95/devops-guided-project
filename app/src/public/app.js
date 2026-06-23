@@ -21,7 +21,7 @@ function setOutput(title, payload) {
 function renderSimulationContext(apiInfo) {
   const container = document.getElementById("simulation-context");
   container.innerHTML = `
-    <p><strong>${apiInfo.scenario_name}</strong> is used to simulate a small platform-operations service view.</p>
+    <p><strong>${apiInfo.scenario_name}</strong> is used to simulate a small but realistic library circulation service.</p>
     <ul class="detail-list">
       <li><strong>Team:</strong> ${apiInfo.team_name}</li>
       <li><strong>Profile:</strong> ${apiInfo.simulation_profile}</li>
@@ -47,25 +47,25 @@ function renderDatasetSnapshot(payload = {}) {
 
   if (!summary || !items.length) {
     snapshot.innerHTML =
-      "Run <strong>Load Items from PostgreSQL</strong> or <strong>Create Demo Item</strong> to inspect the simulated operational dataset.";
+      "Run <strong>Load Library Records</strong> or <strong>Create Demo Checkout</strong> to inspect the simulated library dataset.";
     return;
   }
 
   snapshot.innerHTML = `
     <dl class="summary-grid">
-      <div class="summary-item"><dt>Total Items</dt><dd>${summary.total_items}</dd></div>
-      <div class="summary-item"><dt>Top Status</dt><dd>${formatTopEntries(summary.by_status)}</dd></div>
-      <div class="summary-item"><dt>Top Priority</dt><dd>${formatTopEntries(summary.by_priority)}</dd></div>
-      <div class="summary-item"><dt>Top Service</dt><dd>${formatTopEntries(summary.by_service)}</dd></div>
+      <div class="summary-item"><dt>Total Records</dt><dd>${summary.total_items}</dd></div>
+      <div class="summary-item"><dt>Loan Status</dt><dd>${formatTopEntries(summary.by_status)}</dd></div>
+      <div class="summary-item"><dt>Priority</dt><dd>${formatTopEntries(summary.by_priority)}</dd></div>
+      <div class="summary-item"><dt>Workflow Areas</dt><dd>${formatTopEntries(summary.by_workflow_area || summary.by_service)}</dd></div>
     </dl>
     <table class="dataset-table">
       <thead>
         <tr>
-          <th>Name</th>
-          <th>Service</th>
+          <th>Book Title</th>
+          <th>Workflow</th>
           <th>Status</th>
-          <th>Priority</th>
-          <th>Owner</th>
+          <th>Borrower</th>
+          <th>Due Date</th>
         </tr>
       </thead>
       <tbody>
@@ -74,11 +74,11 @@ function renderDatasetSnapshot(payload = {}) {
           .map(
             (item) => `
               <tr>
-                <td>${item.name}</td>
-                <td>${item.service}</td>
-                <td>${item.status}</td>
-                <td>${item.priority}</td>
-                <td>${item.owner_name}</td>
+                <td>${item.book_title || item.name}</td>
+                <td>${item.workflow_area || item.service}</td>
+                <td>${item.loan_status || item.status}</td>
+                <td>${item.borrower_name || item.member_name || item.owner_name}</td>
+                <td>${item.due_date || "n/a"}</td>
               </tr>
             `
           )
@@ -137,43 +137,43 @@ const actionGuides = {
     ]
   },
   items: {
-    title: "Load Items from PostgreSQL",
+    title: "Load Library Records",
     route: "GET /items",
-    tags: ["PostgreSQL", "operational dataset", "summary view", "slow path candidate"],
+    tags: ["PostgreSQL", "library dataset", "summary view", "slow path candidate"],
     flow: [
       "The app receives GET /items after Nginx forwards it.",
-      "The app queries PostgreSQL for the items table.",
-      "Results are returned to the browser with a dataset summary and one request_id.",
-      "This request is a good way to compare app latency with database-backed work."
+      "The app queries PostgreSQL for the circulation records table.",
+      "Results are returned with book, borrower, branch, and due-date fields plus one request_id.",
+      "This request is a good way to compare app latency with realistic database-backed work."
     ],
     checks: [
       "If this route is slow, compare app logs, PostgreSQL container logs, and request duration metrics.",
-      "Confirm the returned items include realistic seeded operational records from db/init.sql."
+      "Confirm the returned records include realistic seeded library circulation data from db/init.sql."
     ]
   },
   "create-item": {
-    title: "Create Demo Item",
+    title: "Create Demo Checkout",
     route: "POST /items",
     tags: ["PostgreSQL", "write path", "structured logs"],
     flow: [
       "The browser sends POST /items and Nginx forwards it to the app.",
-      "The app writes a new simulated operational row to PostgreSQL and returns HTTP 201.",
-      "The new item can be confirmed immediately with the Load Items button or the dataset snapshot.",
+      "The app writes a new simulated library circulation row to PostgreSQL and returns HTTP 201.",
+      "The new record can be confirmed immediately with the Load Library Records button or the dataset snapshot.",
       "The app and Nginx logs should both show the POST path and created status."
     ],
     checks: [
       "Look for a 201 status in app logs and Nginx access logs.",
-      "Load items again to confirm the new simulated record persisted."
+      "Load records again to confirm the new simulated checkout persisted."
     ]
   },
   "cache-demo": {
-    title: "Test Redis Cache",
+    title: "Test Popular Titles Cache",
     route: "GET /cache-demo",
     tags: ["Redis", "cache hit/miss", "request flow"],
     flow: [
       "Nginx forwards GET /cache-demo to the app.",
       "The app asks Redis for the cached value first.",
-      "If no cached value exists, the app generates a small operational snapshot and stores it in Redis.",
+      "If no cached value exists, the app generates a small popular-titles snapshot and stores it in Redis.",
       "A second run should show the cached source rather than the app-generated source."
     ],
     checks: [
@@ -304,7 +304,7 @@ const actions = {
     return fetchJson("/items", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: `demo-item-${new Date().toISOString()}` })
+      body: JSON.stringify({ book_title: "Site Reliability Engineering", member_name: "Demo Borrower" })
     });
   },
   async "cache-demo"() {

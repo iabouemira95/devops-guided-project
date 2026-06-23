@@ -46,11 +46,11 @@ Validation:
 
 - `bash scripts/validate-local-stack.sh foundation`
 
-### APP-01 Redis Cache Demo
+### APP-01 Popular Titles Cache Demo
 
 Goal:
 
-- make the GUI `Test Redis Cache` button work
+- make the GUI `Test Popular Titles Cache` button work
 - show a clear cache miss on the first request
 - show a clear cache hit on the second request
 

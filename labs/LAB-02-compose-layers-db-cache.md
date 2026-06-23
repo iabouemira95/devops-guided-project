@@ -37,9 +37,9 @@ docker compose logs redis --tail=30
 
 ## What To Do
 
-1. Click `Load Items from PostgreSQL`.
-2. Click `Create Demo Item`.
-3. Click `Test Redis Cache` twice.
+1. Click `Load Library Records`.
+2. Click `Create Demo Checkout`.
+3. Click `Test Popular Titles Cache` twice.
 4. Click `Check Readiness`.
 5. Read the PostgreSQL and Redis logs while you repeat one of those actions.
 
@@ -89,7 +89,7 @@ bash scripts/validate-local-stack.sh full
 - Confirm with: `bash scripts/validate-local-stack.sh full`
 - Expected logs: `docker compose logs postgres --tail=20` and `docker compose logs redis --tail=20` show recent activity after GUI actions.
 - Common failure: students click before PostgreSQL or Redis is fully healthy.
-- Safe retry: wait for `docker compose ps`, then rerun `Load Items`, `Test Redis Cache`, and `Check Readiness`
+- Safe retry: wait for `docker compose ps`, then rerun `Load Library Records`, `Test Popular Titles Cache`, and `Check Readiness`
 
 ## Next Step
 

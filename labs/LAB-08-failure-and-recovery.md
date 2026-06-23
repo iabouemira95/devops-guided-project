@@ -65,8 +65,8 @@ For each scenario:
 - Check Health
 - Check Readiness
 - Generate Error
-- Load Items from PostgreSQL
-- Test Redis Cache
+- Load Library Records
+- Test Popular Titles Cache
 
 ## Expected Output
 

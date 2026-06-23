@@ -19,6 +19,12 @@ function createDb(config = {}) {
         `SELECT
            id,
            name,
+           book_title,
+           member_name,
+           membership_tier,
+           item_format,
+           shelf_code,
+           due_date,
            service,
            environment,
            priority,
@@ -37,6 +43,12 @@ function createDb(config = {}) {
       const result = await pool.query(
         `INSERT INTO items (
            name,
+           book_title,
+           member_name,
+           membership_tier,
+           item_format,
+           shelf_code,
+           due_date,
            service,
            environment,
            priority,
@@ -45,10 +57,16 @@ function createDb(config = {}) {
            region,
            source,
            details
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
          RETURNING
            id,
            name,
+           book_title,
+           member_name,
+           membership_tier,
+           item_format,
+           shelf_code,
+           due_date,
            service,
            environment,
            priority,
@@ -60,6 +78,12 @@ function createDb(config = {}) {
            created_at`,
         [
           item.name,
+          item.book_title,
+          item.member_name,
+          item.membership_tier,
+          item.item_format,
+          item.shelf_code,
+          item.due_date,
           item.service,
           item.environment,
           item.priority,

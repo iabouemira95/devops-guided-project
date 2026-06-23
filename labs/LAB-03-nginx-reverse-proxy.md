@@ -32,7 +32,7 @@ tail -f logs/nginx/access.log
 
 1. Open the GUI through `http://localhost:8080`.
 2. Click `Check Health`.
-3. Click `Load Items from PostgreSQL`.
+3. Click `Load Library Records`.
 4. Watch the Nginx access log while the requests happen.
 5. Open `docker/nginx/nginx.conf` and identify where requests are forwarded.
 

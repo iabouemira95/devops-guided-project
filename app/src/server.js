@@ -12,15 +12,26 @@ function sleep(ms) {
 }
 
 const simulationCatalog = Object.freeze({
-  scenario_name: "Regional commerce platform",
-  team_name: "Platform Operations",
-  services: ["checkout-api", "inventory-worker", "payments-api", "catalog-api"],
+  scenario_name: "Northwind City Library circulation desk",
+  team_name: "Circulation and Digital Services",
+  services: ["circulation-desk", "catalog-search", "holds-queue", "member-notify"],
   environments: ["training-vm", "staging-sim", "prod-sim"],
   priorities: ["low", "medium", "high", "critical"],
-  statuses: ["monitoring", "investigating", "pending-review", "resolved"],
-  owners: ["platform-oncall", "data-ops", "cache-team", "release-manager"],
-  regions: ["sweden-central", "westeurope", "uk-south", "uae-north"],
-  sources: ["synthetic-alert", "queue-monitor", "redis-cache-demo", "manual-check"]
+  statuses: ["available", "checked-out", "pending-review", "ready-for-pickup"],
+  owners: ["desk-lead", "branch-librarian", "digital-services", "shift-supervisor"],
+  regions: ["central-branch", "west-end-branch", "east-branch", "north-branch"],
+  sources: ["self-checkout-kiosk", "catalog-sync", "returns-bin", "manual-desk"],
+  membershipTiers: ["community", "standard", "premium", "research"],
+  itemFormats: ["book", "ebook", "audiobook", "journal"],
+  shelfCodes: ["A-14", "B-07", "C-03", "DIGITAL-22", "REF-11"],
+  titles: [
+    "The Pragmatic Programmer",
+    "Clean Code",
+    "Designing Data-Intensive Applications",
+    "Refactoring",
+    "Domain-Driven Design"
+  ],
+  memberNames: ["Nora Hassan", "Mariam Samir", "Omar Fares", "Salma Adel", "Youssef Nabil"]
 });
 
 function pickFrom(values) {
@@ -29,18 +40,23 @@ function pickFrom(values) {
 
 function getSimulationOverview() {
   return {
-    simulation_profile: "operations-feed",
+    simulation_profile: "library-circulation",
     scenario_name: simulationCatalog.scenario_name,
     team_name: simulationCatalog.team_name,
     supported_services: simulationCatalog.services,
     environments: simulationCatalog.environments,
     regions: simulationCatalog.regions,
     dataset_note:
-      "This app simulates operational records such as incidents, backlog events, cache outcomes, and release follow-up checks."
+      "This app simulates realistic library circulation records such as checkouts, holds, branch intake, and catalog cache activity."
   };
 }
 
 function buildDemoItem(overrides = {}) {
+  const bookTitle = overrides.book_title || overrides.name || pickFrom(simulationCatalog.titles);
+  const memberName = overrides.member_name || pickFrom(simulationCatalog.memberNames);
+  const membershipTier = overrides.membership_tier || pickFrom(simulationCatalog.membershipTiers);
+  const itemFormat = overrides.item_format || pickFrom(simulationCatalog.itemFormats);
+  const shelfCode = overrides.shelf_code || pickFrom(simulationCatalog.shelfCodes);
   const service = overrides.service || pickFrom(simulationCatalog.services);
   const environment = overrides.environment || pickFrom(simulationCatalog.environments);
   const priority = overrides.priority || pickFrom(simulationCatalog.priorities);
@@ -48,11 +64,20 @@ function buildDemoItem(overrides = {}) {
   const owner_name = overrides.owner_name || pickFrom(simulationCatalog.owners);
   const region = overrides.region || pickFrom(simulationCatalog.regions);
   const source = overrides.source || pickFrom(simulationCatalog.sources);
+  const dueDate =
+    overrides.due_date ||
+    new Date(Date.now() + (Math.floor(Math.random() * 10) + 2) * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
 
   return {
-    name:
-      overrides.name ||
-      `${service} ${status.replace(/-/g, " ")} check at ${new Date().toISOString().slice(11, 19)}`,
+    name: overrides.name || `${bookTitle} checkout for ${memberName}`,
+    book_title: bookTitle,
+    member_name: memberName,
+    membership_tier: membershipTier,
+    item_format: itemFormat,
+    shelf_code: shelfCode,
+    due_date: dueDate,
     service,
     environment,
     priority,
@@ -62,7 +87,18 @@ function buildDemoItem(overrides = {}) {
     source,
     details:
       overrides.details ||
-      `Synthetic operational record for ${service} in ${environment}. Owner ${owner_name} is reviewing ${status} activity in ${region}.`
+      `${memberName} has a ${status.replace(/-/g, " ")} ${itemFormat} request for "${bookTitle}" at ${region}. ${owner_name} is reviewing the ${service} workflow in ${environment}.`
+  };
+}
+
+function normalizeItem(item) {
+  return {
+    ...item,
+    workflow_area: item.service,
+    branch_name: item.region,
+    borrower_name: item.member_name || item.owner_name,
+    loan_status: item.status,
+    urgency: item.priority
   };
 }
 
@@ -75,13 +111,16 @@ function countBy(items, key) {
 }
 
 function buildItemsSummary(items) {
+  const normalizedItems = items.map(normalizeItem);
   return {
-    total_items: items.length,
-    by_status: countBy(items, "status"),
-    by_priority: countBy(items, "priority"),
-    by_service: countBy(items, "service"),
-    by_environment: countBy(items, "environment"),
-    latest_item: items[0] || null
+    total_items: normalizedItems.length,
+    by_status: countBy(normalizedItems, "status"),
+    by_priority: countBy(normalizedItems, "priority"),
+    by_service: countBy(normalizedItems, "service"),
+    by_environment: countBy(normalizedItems, "environment"),
+    by_workflow_area: countBy(normalizedItems, "workflow_area"),
+    by_branch: countBy(normalizedItems, "branch_name"),
+    latest_item: normalizedItems[0] || null
   };
 }
 
@@ -272,6 +311,7 @@ function createApp(deps = {}) {
   app.get("/items", async (_req, res, next) => {
     try {
       const items = await db.getItems();
+      const normalizedItems = items.map(normalizeItem);
       logger.info("postgres items loaded", {
         request_id: _req.requestId,
         item_count: items.length
@@ -280,7 +320,7 @@ function createApp(deps = {}) {
         source: "postgres",
         count: items.length,
         summary: buildItemsSummary(items),
-        items
+        items: normalizedItems
       });
     } catch (error) {
       next(error);
@@ -296,15 +336,17 @@ function createApp(deps = {}) {
         request_id: req.requestId,
         item_id: item.id,
         item_name: item.name,
+        book_title: item.book_title,
+        member_name: item.member_name,
         item_service: item.service,
         item_priority: item.priority,
         item_status: item.status
       });
       res.status(201).json({
-        message: "Simulated operational item created",
-        item,
+        message: "Demo library circulation record created",
+        item: normalizeItem(item),
         summary: buildItemsSummary(items),
-        recent_items: items.slice(0, 5)
+        recent_items: items.slice(0, 5).map(normalizeItem)
       });
     } catch (error) {
       next(error);
@@ -319,7 +361,7 @@ function createApp(deps = {}) {
     });
 
     return res.status(501).json({
-      error: "Training gap APP-01: implement the Redis cache demo route.",
+      error: "Training gap APP-01: implement the library popularity cache route.",
       next_step: "Read docs/13-trainee-gap-map.md and complete the APP-01 instructions.",
       request_id: _req.requestId
     });
@@ -337,13 +379,13 @@ function createApp(deps = {}) {
     });
     res.json({
       status: "ok",
-      note: "This route was intentionally slow.",
+      note: "This route simulates a slow catalog or borrower activity query.",
       delay_ms: 2500
     });
   });
 
   app.get("/error", (_req, _res, next) => {
-    const error = new Error("Intentional training error");
+    const error = new Error("Intentional training error while processing a circulation request");
     error.statusCode = 500;
     next(error);
   });
