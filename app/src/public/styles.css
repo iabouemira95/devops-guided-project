@@ -112,6 +112,11 @@ h1 {
   margin-top: 20px;
 }
 
+.request-state-grid,
+.response-detail-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
 .flow-grid {
   display: grid;
   grid-template-columns: 1.35fr 1fr;
@@ -265,6 +270,138 @@ button:disabled {
   color: var(--accent);
   font-size: 0.86rem;
   font-weight: 700;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.status-card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fffaf0;
+  padding: 14px;
+}
+
+.status-card dt {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-card dd {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.status-card dd small {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.pill-neutral {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.pill-progress {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.pill-ok {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.pill-warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.pill-error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.timeline-list,
+.notes-list {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.7;
+}
+
+.timeline-list li + li,
+.notes-list li + li {
+  margin-top: 10px;
+}
+
+.trail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.trail-table th,
+.trail-table td {
+  border-bottom: 1px dashed var(--line);
+  padding: 10px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.trail-table th {
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.mono {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.85rem;
+}
+
+.summary-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.summary-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.summary-row dt {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.summary-row dd {
+  margin: 0;
+}
+
+.button-grid button.is-loading {
+  background: #334155;
 }
 
 #response-output {

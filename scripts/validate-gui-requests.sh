@@ -4,6 +4,7 @@ set -Eeuo pipefail
 BASE_URL="${1:-http://localhost:8080}"
 EXIT_CODE=0
 CREATED_ITEM_NAME=""
+HTML_RESPONSE=""
 
 pass() {
   printf '[PASS] %s\n' "$1"
@@ -90,6 +91,32 @@ request() {
   rm -f "${headers_file}" "${body_file}"
 }
 
+request_text() {
+  local path="$1"
+  local headers_file body_file status_code request_id
+
+  headers_file="$(mktemp)"
+  body_file="$(mktemp)"
+
+  status_code="$(
+    curl -sS \
+      -D "${headers_file}" \
+      -o "${body_file}" \
+      -w '%{http_code}' \
+      "${BASE_URL}${path}"
+  )"
+
+  request_id="$(
+    awk 'BEGIN {IGNORECASE=1} /^X-Request-Id:/ {gsub("\r", "", $2); print $2}' "${headers_file}" | tail -n 1
+  )"
+
+  RESPONSE_STATUS="${status_code}"
+  HTML_RESPONSE="$(cat "${body_file}")"
+  RESPONSE_REQUEST_ID="${request_id}"
+
+  rm -f "${headers_file}" "${body_file}"
+}
+
 assert_request_id() {
   local path="$1"
 
@@ -123,6 +150,41 @@ validate_api() {
   fi
 }
 
+validate_homepage() {
+  request_text /
+
+  if [[ "${RESPONSE_STATUS}" == "200" ]]; then
+    pass "GET / returned the GUI shell."
+  else
+    fail "GET / returned HTTP ${RESPONSE_STATUS}."
+    return
+  fi
+
+  if grep -q "Library Operations Control Panel" <<<"${HTML_RESPONSE}" \
+    && grep -q "Live Request Tracker" <<<"${HTML_RESPONSE}" \
+    && grep -q "Recent Request Trail" <<<"${HTML_RESPONSE}" \
+    && grep -q "Check Health" <<<"${HTML_RESPONSE}" \
+    && grep -q "Generate Error" <<<"${HTML_RESPONSE}"; then
+    pass "GET / includes the expected GUI sections and action buttons."
+  else
+    fail "GET / is missing one or more expected GUI sections or buttons."
+  fi
+
+  request_text /static/app.js
+  if [[ "${RESPONSE_STATUS}" == "200" ]] && grep -q "renderLiveRequestState" <<<"${HTML_RESPONSE}"; then
+    pass "GET /static/app.js served the GUI behavior bundle."
+  else
+    fail "GET /static/app.js is missing or does not contain the expected GUI behavior."
+  fi
+
+  request_text /static/styles.css
+  if [[ "${RESPONSE_STATUS}" == "200" ]] && grep -q ".status-grid" <<<"${HTML_RESPONSE}"; then
+    pass "GET /static/styles.css served the expected GUI styling."
+  else
+    fail "GET /static/styles.css is missing or does not contain the expected GUI styling."
+  fi
+}
+
 validate_ui_config() {
   request GET /ui-config
 
@@ -138,7 +200,8 @@ validate_ui_config() {
   if json_has_key "${RESPONSE_BODY}" "observability_mode" \
     && json_has_key "${RESPONSE_BODY}" "hint" \
     && json_has_key "${RESPONSE_BODY}" "grafana_url" \
-    && json_has_key "${RESPONSE_BODY}" "prometheus_url"; then
+    && json_has_key "${RESPONSE_BODY}" "prometheus_url" \
+    && jq -e '.observability_mode == "local-direct" or .observability_mode == "ssh-tunnel" or .observability_mode == "explicit-public-links"' >/dev/null <<<"${RESPONSE_BODY}"; then
     pass "GET /ui-config returned observability shortcut metadata."
   else
     fail "GET /ui-config response is missing observability shortcut keys."
@@ -270,38 +333,20 @@ validate_created_item_visible() {
 validate_cache_demo() {
   request GET /cache-demo
 
-  if [[ "${RESPONSE_STATUS}" == "200" ]]; then
-    pass "First GET /cache-demo returned HTTP 200."
+  if [[ "${RESPONSE_STATUS}" == "501" ]]; then
+    pass "GET /cache-demo returned the intentional APP-01 training gap response."
   else
-    fail "First GET /cache-demo returned HTTP ${RESPONSE_STATUS}."
+    fail "GET /cache-demo returned HTTP ${RESPONSE_STATUS} instead of the expected APP-01 gap response."
     return
   fi
 
-  assert_request_id "First GET /cache-demo"
+  assert_request_id "GET /cache-demo"
 
-  if json_has_key "${RESPONSE_BODY}" "source" \
-    && json_has_key "${RESPONSE_BODY}" "value" \
-    && jq -e '.value.highlighted_service and .value.highlighted_region and .value.highlighted_title and .value.cache_key' >/dev/null <<<"${RESPONSE_BODY}"; then
-    pass "First GET /cache-demo returned the richer cache payload."
+  if json_has_key "${RESPONSE_BODY}" "error" \
+    && jq -e '.error | test("APP-01")' >/dev/null <<<"${RESPONSE_BODY}"; then
+    pass "GET /cache-demo clearly explains the APP-01 trainee gap."
   else
-    fail "First GET /cache-demo response is missing cache payload fields."
-  fi
-
-  request GET /cache-demo
-
-  if [[ "${RESPONSE_STATUS}" == "200" ]]; then
-    pass "Second GET /cache-demo returned HTTP 200."
-  else
-    fail "Second GET /cache-demo returned HTTP ${RESPONSE_STATUS}."
-    return
-  fi
-
-  assert_request_id "Second GET /cache-demo"
-
-  if json_equals "${RESPONSE_BODY}" '.source' 'redis-cache'; then
-    pass "Second GET /cache-demo confirmed the Redis cache hit path."
-  else
-    fail "Second GET /cache-demo did not show a Redis cache hit."
+    fail "GET /cache-demo did not describe the APP-01 trainee gap clearly."
   fi
 }
 
@@ -346,7 +391,9 @@ validate_error() {
 
   assert_request_id "GET /error"
 
-  if json_has_key "${RESPONSE_BODY}" "error" && json_has_key "${RESPONSE_BODY}" "request_id"; then
+  if json_has_key "${RESPONSE_BODY}" "error" \
+    && json_has_key "${RESPONSE_BODY}" "request_id" \
+    && json_equals "${RESPONSE_BODY}" '.request_id' "${RESPONSE_REQUEST_ID}"; then
     pass "GET /error returned structured error JSON."
   else
     fail "GET /error response is missing structured error fields."
@@ -356,6 +403,7 @@ validate_error() {
 echo "Deeply validating GUI-backed request flows at ${BASE_URL}..."
 
 require_jq
+validate_homepage
 validate_api
 validate_ui_config
 validate_health

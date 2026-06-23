@@ -1,4 +1,17 @@
+const recentRequests = [];
+let currentUiConfig = null;
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 async function fetchJson(url, options = {}) {
+  const startedAt = performance.now();
   const response = await fetch(url, options);
   const contentType = response.headers.get("content-type") || "";
   const body = contentType.includes("application/json")
@@ -9,7 +22,9 @@ async function fetchJson(url, options = {}) {
     ok: response.ok,
     status: response.status,
     body,
-    requestId: response.headers.get("x-request-id")
+    requestId: response.headers.get("x-request-id"),
+    durationMs: Number((performance.now() - startedAt).toFixed(2)),
+    url
   };
 }
 
@@ -21,15 +36,15 @@ function setOutput(title, payload) {
 function renderSimulationContext(apiInfo) {
   const container = document.getElementById("simulation-context");
   container.innerHTML = `
-    <p><strong>${apiInfo.scenario_name}</strong> is used to simulate a small but realistic library circulation service.</p>
+    <p><strong>${escapeHtml(apiInfo.scenario_name)}</strong> is used to simulate a small but realistic library circulation service.</p>
     <ul class="detail-list">
-      <li><strong>Team:</strong> ${apiInfo.team_name}</li>
-      <li><strong>Profile:</strong> ${apiInfo.simulation_profile}</li>
-      <li><strong>Services:</strong> ${apiInfo.supported_services.join(", ")}</li>
-      <li><strong>Environments:</strong> ${apiInfo.environments.join(", ")}</li>
-      <li><strong>Regions:</strong> ${apiInfo.regions.join(", ")}</li>
+      <li><strong>Team:</strong> ${escapeHtml(apiInfo.team_name)}</li>
+      <li><strong>Profile:</strong> ${escapeHtml(apiInfo.simulation_profile)}</li>
+      <li><strong>Services:</strong> ${apiInfo.supported_services.map(escapeHtml).join(", ")}</li>
+      <li><strong>Environments:</strong> ${apiInfo.environments.map(escapeHtml).join(", ")}</li>
+      <li><strong>Regions:</strong> ${apiInfo.regions.map(escapeHtml).join(", ")}</li>
     </ul>
-    <p class="hint">${apiInfo.dataset_note}</p>
+    <p class="hint">${escapeHtml(apiInfo.dataset_note)}</p>
   `;
 }
 
@@ -53,10 +68,10 @@ function renderDatasetSnapshot(payload = {}) {
 
   snapshot.innerHTML = `
     <dl class="summary-grid">
-      <div class="summary-item"><dt>Total Records</dt><dd>${summary.total_items}</dd></div>
-      <div class="summary-item"><dt>Loan Status</dt><dd>${formatTopEntries(summary.by_status)}</dd></div>
-      <div class="summary-item"><dt>Priority</dt><dd>${formatTopEntries(summary.by_priority)}</dd></div>
-      <div class="summary-item"><dt>Workflow Areas</dt><dd>${formatTopEntries(summary.by_workflow_area || summary.by_service)}</dd></div>
+      <div class="summary-item"><dt>Total Records</dt><dd>${escapeHtml(summary.total_items)}</dd></div>
+      <div class="summary-item"><dt>Loan Status</dt><dd>${escapeHtml(formatTopEntries(summary.by_status))}</dd></div>
+      <div class="summary-item"><dt>Priority</dt><dd>${escapeHtml(formatTopEntries(summary.by_priority))}</dd></div>
+      <div class="summary-item"><dt>Workflow Areas</dt><dd>${escapeHtml(formatTopEntries(summary.by_workflow_area || summary.by_service))}</dd></div>
     </dl>
     <table class="dataset-table">
       <thead>
@@ -74,11 +89,11 @@ function renderDatasetSnapshot(payload = {}) {
           .map(
             (item) => `
               <tr>
-                <td>${item.book_title || item.name}</td>
-                <td>${item.workflow_area || item.service}</td>
-                <td>${item.loan_status || item.status}</td>
-                <td>${item.borrower_name || item.member_name || item.owner_name}</td>
-                <td>${item.due_date || "n/a"}</td>
+                <td>${escapeHtml(item.book_title || item.name)}</td>
+                <td>${escapeHtml(item.workflow_area || item.service)}</td>
+                <td>${escapeHtml(item.loan_status || item.status)}</td>
+                <td>${escapeHtml(item.borrower_name || item.member_name || item.owner_name)}</td>
+                <td>${escapeHtml(item.due_date || "n/a")}</td>
               </tr>
             `
           )
@@ -93,6 +108,7 @@ const actionGuides = {
     title: "Check Health",
     route: "GET /health",
     tags: ["Nginx", "Express", "request_id", "logs", "metrics"],
+    dependencies: "No external dependency checks are needed for this route.",
     flow: [
       "Browser clicks the Health button and Nginx receives the request first.",
       "Nginx forwards the request to the Express app on port 3000.",
@@ -109,6 +125,7 @@ const actionGuides = {
     title: "Check Readiness",
     route: "GET /ready",
     tags: ["Nginx", "Express", "PostgreSQL", "Redis", "readiness gauges"],
+    dependencies: "This route actively checks PostgreSQL and Redis before returning.",
     flow: [
       "Nginx forwards GET /ready to the app.",
       "The app checks PostgreSQL connectivity and Redis connectivity.",
@@ -125,6 +142,7 @@ const actionGuides = {
     title: "Show Version",
     route: "GET /version",
     tags: ["version", "image tag", "environment", "deploy metadata"],
+    dependencies: "This route reads deployment metadata already loaded into the app environment.",
     flow: [
       "Nginx forwards GET /version to the app.",
       "The app returns build metadata from environment variables.",
@@ -140,6 +158,7 @@ const actionGuides = {
     title: "Load Library Records",
     route: "GET /items",
     tags: ["PostgreSQL", "library dataset", "summary view", "slow path candidate"],
+    dependencies: "This route reads circulation records from PostgreSQL and summarizes them for the GUI.",
     flow: [
       "The app receives GET /items after Nginx forwards it.",
       "The app queries PostgreSQL for the circulation records table.",
@@ -155,6 +174,7 @@ const actionGuides = {
     title: "Create Demo Checkout",
     route: "POST /items",
     tags: ["PostgreSQL", "write path", "structured logs"],
+    dependencies: "This route writes a new circulation record to PostgreSQL, then reloads the latest summary.",
     flow: [
       "The browser sends POST /items and Nginx forwards it to the app.",
       "The app writes a new simulated library circulation row to PostgreSQL and returns HTTP 201.",
@@ -170,6 +190,7 @@ const actionGuides = {
     title: "Test Popular Titles Cache",
     route: "GET /cache-demo",
     tags: ["Redis", "cache hit/miss", "request flow"],
+    dependencies: "This route checks Redis first, then generates and stores a payload if the cache is empty.",
     flow: [
       "Nginx forwards GET /cache-demo to the app.",
       "The app asks Redis for the cached value first.",
@@ -185,6 +206,7 @@ const actionGuides = {
     title: "Generate Slow Request",
     route: "GET /slow",
     tags: ["latency", "logs", "histogram", "Grafana"],
+    dependencies: "This route stays inside the app but intentionally waits before sending the response.",
     flow: [
       "Nginx forwards GET /slow to the app.",
       "The app intentionally waits 2500 ms before responding.",
@@ -200,6 +222,7 @@ const actionGuides = {
     title: "Generate Error",
     route: "GET /error",
     tags: ["500", "error log", "Nginx", "metrics"],
+    dependencies: "This route intentionally raises an application error after the request reaches Express.",
     flow: [
       "Nginx forwards GET /error to the app.",
       "The app raises the intentional training error and returns HTTP 500.",
@@ -214,6 +237,55 @@ const actionGuides = {
   }
 };
 
+function getPillClass(value) {
+  if (value === "ready" || value === "healthy" || value === "observed" || value === "200" || value === "201") {
+    return "pill pill-ok";
+  }
+
+  if (value === "running" || value === "in-flight") {
+    return "pill pill-progress";
+  }
+
+  if (value === "warning" || value === "degraded") {
+    return "pill pill-warn";
+  }
+
+  if (value === "500" || value === "failed") {
+    return "pill pill-error";
+  }
+
+  return "pill pill-neutral";
+}
+
+function toDisplayState(action, result) {
+  const guide = actionGuides[action];
+  const payload = result.body && typeof result.body === "object" ? result.body : {};
+  const source = payload.source || payload.value?.cache_key || payload.status || "app-response";
+  const statusLabel = String(result.status);
+  const dependencyState =
+    action === "ready"
+      ? payload.db_ready && payload.redis_ready
+        ? "ready"
+        : "degraded"
+      : action === "items" || action === "create-item"
+        ? "PostgreSQL"
+        : action === "cache-demo"
+          ? payload.source === "redis-cache"
+            ? "redis-hit"
+            : "redis-write"
+          : guide?.dependencies || "app-only";
+
+  return {
+    title: guide?.title || action,
+    route: guide?.route || result.url,
+    statusLabel,
+    requestId: result.requestId || "n/a",
+    durationMs: result.durationMs,
+    source,
+    dependencyState
+  };
+}
+
 function renderGuide(action) {
   const guide = actionGuides[action];
   const flowContainer = document.getElementById("request-flow");
@@ -226,21 +298,164 @@ function renderGuide(action) {
   }
 
   flowContainer.innerHTML = `
-    <p><strong>${guide.title}</strong> uses <code>${guide.route}</code>.</p>
-    <div>${guide.tags.map((tag) => `<span class="flow-tag">${tag}</span>`).join("")}</div>
+    <p><strong>${escapeHtml(guide.title)}</strong> uses <code>${escapeHtml(guide.route)}</code>.</p>
+    <div>${guide.tags.map((tag) => `<span class="flow-tag">${escapeHtml(tag)}</span>`).join("")}</div>
+    <p class="hint"><strong>Dependency focus:</strong> ${escapeHtml(guide.dependencies)}</p>
     <ol class="flow-list">
-      ${guide.flow.map((step) => `<li>${step}</li>`).join("")}
+      ${guide.flow.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
     </ol>
   `;
 
   checklistContainer.innerHTML = `
     <ol class="check-list">
-      ${guide.checks.map((step) => `<li>${step}</li>`).join("")}
+      ${guide.checks.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
     </ol>
   `;
 }
 
+function renderLiveRequestState(action, result = null) {
+  const guide = actionGuides[action];
+  const container = document.getElementById("live-request-state");
+
+  if (!guide) {
+    container.textContent =
+      "Trigger a request to watch the ingress, app handling, dependency work, and observability hints update together.";
+    return;
+  }
+
+  const state = result ? toDisplayState(action, result) : null;
+  const ingress = state ? (result.status >= 400 ? "500" : "200") : "in-flight";
+  const appState = state ? (result.status >= 400 ? "failed" : "healthy") : "running";
+  const dependencyState = state
+    ? result.status >= 500 && action === "error"
+      ? "warning"
+      : action === "ready"
+        ? state.dependencyState
+        : "observed"
+    : "running";
+  const observabilityState = state ? "observed" : "running";
+
+  container.innerHTML = `
+    <p><strong>${escapeHtml(guide.title)}</strong> is mapped to <code>${escapeHtml(guide.route)}</code>.</p>
+    <dl class="status-grid">
+      <div class="status-card">
+        <dt>Ingress</dt>
+        <dd><span class="${getPillClass(ingress)}">${escapeHtml(ingress === "200" ? "Nginx forwarded" : ingress)}</span><small>Public request entry point</small></dd>
+      </div>
+      <div class="status-card">
+        <dt>App</dt>
+        <dd><span class="${getPillClass(appState)}">${escapeHtml(appState)}</span><small>Express request handling</small></dd>
+      </div>
+      <div class="status-card">
+        <dt>Dependency</dt>
+        <dd><span class="${getPillClass(dependencyState)}">${escapeHtml(dependencyState)}</span><small>${escapeHtml(guide.dependencies)}</small></dd>
+      </div>
+      <div class="status-card">
+        <dt>Observability</dt>
+        <dd><span class="${getPillClass(observabilityState)}">${escapeHtml(observabilityState)}</span><small>Logs and metrics should now reflect this request</small></dd>
+      </div>
+    </dl>
+    <ul class="timeline-list">
+      <li><strong>Request:</strong> ${escapeHtml(guide.route)}</li>
+      <li><strong>Request ID:</strong> <span class="mono">${escapeHtml(state?.requestId || "pending")}</span></li>
+      <li><strong>Browser duration:</strong> ${escapeHtml(state ? `${state.durationMs} ms` : "Waiting for response")}</li>
+    </ul>
+  `;
+}
+
+function renderRecentTrail() {
+  const container = document.getElementById("recent-request-trail");
+
+  if (!recentRequests.length) {
+    container.textContent =
+      "Your last few actions will appear here with request IDs, status codes, and durations so you can follow the request cycle step by step.";
+    return;
+  }
+
+  container.innerHTML = `
+    <table class="trail-table">
+      <thead>
+        <tr>
+          <th>Action</th>
+          <th>Status</th>
+          <th>Request ID</th>
+          <th>Duration</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${recentRequests
+          .map(
+            (entry) => `
+              <tr>
+                <td>${escapeHtml(entry.title)}<div class="hint">${escapeHtml(entry.route)}</div></td>
+                <td><span class="${getPillClass(String(entry.status))}">${escapeHtml(String(entry.status))}</span></td>
+                <td class="mono">${escapeHtml(entry.requestId || "n/a")}</td>
+                <td>${escapeHtml(`${entry.durationMs} ms`)}</td>
+              </tr>
+            `
+          )
+          .join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderResponseSummary(action, result = null) {
+  const guide = actionGuides[action];
+  const container = document.getElementById("response-summary");
+
+  if (!guide || !result) {
+    container.textContent =
+      "Run a request to see the request ID, duration, source, and suggested next checks.";
+    return;
+  }
+
+  const state = toDisplayState(action, result);
+  const payload = result.body && typeof result.body === "object" ? result.body : {};
+  const nextCheck = guide.checks[0] || "Review the related logs and metrics.";
+
+  container.innerHTML = `
+    <dl class="summary-stack">
+      <div class="summary-row"><dt>Action</dt><dd>${escapeHtml(state.title)}</dd></div>
+      <div class="summary-row"><dt>Status</dt><dd><span class="${getPillClass(state.statusLabel)}">${escapeHtml(state.statusLabel)}</span></dd></div>
+      <div class="summary-row"><dt>Request ID</dt><dd class="mono">${escapeHtml(state.requestId)}</dd></div>
+      <div class="summary-row"><dt>Browser Duration</dt><dd>${escapeHtml(`${state.durationMs} ms`)}</dd></div>
+      <div class="summary-row"><dt>Payload Source</dt><dd>${escapeHtml(payload.source || payload.status || "app-response")}</dd></div>
+      <div class="summary-row"><dt>Next Check</dt><dd>${escapeHtml(nextCheck)}</dd></div>
+    </dl>
+  `;
+}
+
+function renderOperationalNotes(action, result = null) {
+  const guide = actionGuides[action];
+  const container = document.getElementById("operational-notes");
+
+  if (!guide || !result) {
+    container.innerHTML = `
+      <ul class="notes-list">
+        <li>Use one GUI action at a time so the request IDs are easy to follow.</li>
+        <li>Compare the response panel with app logs, Nginx access logs, and Grafana.</li>
+        <li>Use <strong>Generate Slow Request</strong> and <strong>Generate Error</strong> to create visible signals for troubleshooting.</li>
+      </ul>
+    `;
+    return;
+  }
+
+  const notes = [
+    `Use request ID ${result.requestId || "n/a"} to find the matching app log lines.`,
+    `Check the Nginx access log for ${guide.route} and confirm the HTTP status ${result.status}.`,
+    currentUiConfig?.hint || "Open Grafana or Prometheus from the shortcuts after generating traffic."
+  ];
+
+  container.innerHTML = `
+    <ul class="notes-list">
+      ${notes.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}
+    </ul>
+  `;
+}
+
 function configureShortcutButtons(config) {
+  currentUiConfig = config;
   const hint = document.getElementById("observability-hint");
   hint.textContent = config.hint;
 
@@ -277,14 +492,23 @@ async function loadMetadata() {
 
   const container = document.getElementById("service-meta");
   container.innerHTML = `
-    <div><dt>Service</dt><dd>${meta.service_name}</dd></div>
-    <div><dt>Version</dt><dd>${meta.version}</dd></div>
-    <div><dt>Environment</dt><dd>${meta.environment}</dd></div>
-    <div><dt>Image Tag</dt><dd>${meta.image_tag}</dd></div>
+    <div><dt>Service</dt><dd>${escapeHtml(meta.service_name)}</dd></div>
+    <div><dt>Version</dt><dd>${escapeHtml(meta.version)}</dd></div>
+    <div><dt>Environment</dt><dd>${escapeHtml(meta.environment)}</dd></div>
+    <div><dt>Image Tag</dt><dd>${escapeHtml(meta.image_tag)}</dd></div>
   `;
 
   renderSimulationContext(apiInfo.body);
   configureShortcutButtons(uiConfig.body);
+  renderOperationalNotes();
+}
+
+function setActionButtonsDisabled(disabled, activeAction = "") {
+  document.querySelectorAll("[data-action]").forEach((button) => {
+    const isActive = button.getAttribute("data-action") === activeAction;
+    button.disabled = disabled;
+    button.classList.toggle("is-loading", disabled && isActive);
+  });
 }
 
 const actions = {
@@ -332,17 +556,35 @@ document.addEventListener("click", async (event) => {
   }
 
   renderGuide(action);
+  renderLiveRequestState(action);
   setOutput("Working…", { action });
+  setActionButtonsDisabled(true, action);
 
   try {
     const result = await actions[action]();
     renderDatasetSnapshot(result.body);
+    renderLiveRequestState(action, result);
+    renderResponseSummary(action, result);
+    renderOperationalNotes(action, result);
+
+    recentRequests.unshift({
+      ...toDisplayState(action, result),
+      status: result.status
+    });
+    recentRequests.splice(5);
+    renderRecentTrail();
+
     setOutput(`${action} -> HTTP ${result.status}`, {
       request_id: result.requestId,
+      browser_duration_ms: result.durationMs,
       payload: result.body
     });
   } catch (error) {
+    renderResponseSummary(action);
+    renderOperationalNotes();
     setOutput("Request failed", { message: error.message });
+  } finally {
+    setActionButtonsDisabled(false);
   }
 });
 

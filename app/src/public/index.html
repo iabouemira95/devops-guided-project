@@ -75,6 +75,24 @@
         </article>
       </section>
 
+      <section class="detail-grid request-state-grid">
+        <article class="detail-card">
+          <h2>Live Request Tracker</h2>
+          <div id="live-request-state">
+            Trigger a request to watch the ingress, app handling, dependency work,
+            and observability hints update together.
+          </div>
+        </article>
+
+        <article class="detail-card">
+          <h2>Recent Request Trail</h2>
+          <div id="recent-request-trail">
+            Your last few actions will appear here with request IDs, status codes,
+            and durations so you can follow the request cycle step by step.
+          </div>
+        </article>
+      </section>
+
       <section class="flow-grid">
         <article class="flow-card">
           <div class="response-header">
@@ -96,6 +114,24 @@
             </p>
           </div>
           <div id="request-checklist">Run one request to see the related checks.</div>
+        </article>
+      </section>
+
+      <section class="detail-grid response-detail-grid">
+        <article class="detail-card">
+          <h2>Last Response Summary</h2>
+          <div id="response-summary">
+            Run a request to see the request ID, duration, source, and suggested
+            next checks.
+          </div>
+        </article>
+
+        <article class="detail-card">
+          <h2>Operational Notes</h2>
+          <div id="operational-notes">
+            Use one GUI action at a time, then compare the request ID in the
+            response panel with app logs, Nginx logs, and Grafana panels.
+          </div>
         </article>
       </section>
 
